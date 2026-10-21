@@ -1,9 +1,23 @@
 function errorHandler(error, req, res, next) {
-  console.error(error);
+  const statusCode =
+    Number.isInteger(error.statusCode) &&
+    error.statusCode >= 400 &&
+    error.statusCode <= 599
+      ? error.statusCode
+      : 500;
 
-  res.status(500).json({
+  const message =
+    statusCode === 500
+      ? "Error interno del servidor"
+      : error.message || "Error en la solicitud";
+
+  if (statusCode >= 500) {
+    console.error(error);
+  }
+
+  return res.status(statusCode).json({
     status: "error",
-    message: "Error interno del servidor"
+    message
   });
 }
 

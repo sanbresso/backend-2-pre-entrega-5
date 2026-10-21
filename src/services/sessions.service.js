@@ -130,7 +130,7 @@ export const loginUser = async (credentials = {}) => {
     );
   }
 
-   return {
+  return {
     id: user._id.toString(),
     email: user.email,
     role: user.role

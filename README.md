@@ -1,99 +1,61 @@
 # Plataforma de Eventos e Inscripciones
 
-## Pre-entrega 4 — Autenticación centralizada con Passport.js
+## Pre-entrega 5 — Roles y autorización profesional
 
-## Descripción
+Proyecto de **PBE II — Diseño y Arquitectura Backend (Coderhouse)** desarrollado con Node.js, Express, MongoDB Atlas y Mongoose. Esta entrega continúa las anteriores e incorpora **autorización por roles (RBAC)**, **validación de propiedad de eventos (Ownership)** y protección de rutas con respuestas HTTP diferenciadas.
 
-Proyecto backend desarrollado como parte del curso **PBE II — Diseño y Arquitectura Backend**.
+### Evolución del proyecto
 
-La aplicación está orientada a la gestión de eventos e inscripciones de usuarios.
+- **Pre-entrega 1:** arquitectura modular de Express, modelos y rutas iniciales.
+- **Pre-entrega 2:** registro de usuarios, bcrypt, validaciones y persistencia MongoDB.
+- **Pre-entrega 3:** login, JWT firmado, cookie HttpOnly `currentUser`, sesión actual y logout.
+- **Pre-entrega 4:** estrategias Passport.js `register`, `login` y `current`.
+- **Pre-entrega 5:** roles `user`, `organizer`, `admin`, middlewares de autorización reutilizables, creación/edición de eventos y ruta administrativa.
 
-La Pre-entrega 1 estableció la arquitectura modular inicial y la Pre-entrega 2 incorporó el registro seguro de usuarios con bcrypt y persistencia en MongoDB mediante Mongoose.
+## Tecnologías
 
-La Pre-entrega 3 amplió el módulo de sesiones con login, generación y verificación de JWT, almacenamiento en la cookie HttpOnly `currentUser`, ruta protegida `/current` y logout.
+- Node.js y JavaScript ESM (`"type": "module"`)
+- Express 5, MongoDB Atlas, Mongoose
+- bcrypt, jsonwebtoken, cookie-parser
+- Passport.js (`passport-local`, `passport-jwt`)
+- dotenv, Git y GitHub
 
-La **Pre-entrega 4** centraliza registro, login y usuario actual mediante las estrategias **Passport.js `register`, `login` y `current`**. Conserva los endpoints, las respuestas JSON, los JWT y las cookies de la Pre-entrega 3; cambia la organización interna de la autenticación.
+## Instalación y ejecución
 
-## Tecnologías utilizadas
+1. Clonar el repositorio público de la Pre-entrega 5 (cuando esté publicado):
 
-- Node.js
-- Express.js
-- JavaScript con módulos ESM
-- MongoDB
-- Mongoose
-- bcrypt
-- jsonwebtoken
-- cookie-parser
-- passport
-- passport-local
-- passport-jwt
-- dotenv
-- Git y GitHub
+   ```bash
+   git clone https://github.com/sanbresso/backend-2-pre-entrega-5.git
+   cd backend-2-pre-entrega-5
+   ```
 
-## Requisitos previos
+2. Instalar dependencias:
 
-- Node.js y npm instalados.
-- Acceso a MongoDB Atlas y un clúster configurado (requerido para la entrega). Para desarrollo local también se puede utilizar MongoDB Community Server.
-- Un cliente HTTP, como Thunder Client, Postman o curl, para realizar las pruebas.
+   ```bash
+   npm install
+   ```
 
-## Instalación
+3. Crear un archivo `.env` en la raíz a partir de `.env.example` y completar los valores privados:
 
-### 1. Clonar el repositorio
+   ```dotenv
+   PORT=8080
+   NODE_ENV=development
+   MONGO_URL=mongodb+srv://USUARIO:CONTRASENA@TU_CLUSTER.mongodb.net/plataforma_eventos
+   JWT_SECRET=REEMPLAZAR_POR_CLAVE_SECRETA_SEGURA
+   JWT_EXPIRES_IN=1h
+   ```
 
-```bash
-git clone https://github.com/sanbresso/backend-2-pre-entrega-4.git
-cd backend-2-pre-entrega-4
-```
+4. Iniciar el servidor con MongoDB conectado:
 
-### 2. Instalar las dependencias
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm install
-```
+   Para ejecución normal, usar `npm start`. El script de desarrollo usa **`node --watch src/server.js`** (no nodemon). La URL base de los ejemplos es `http://localhost:8080`.
 
-### 3. Configurar las variables de entorno
+> **Seguridad:** nunca subir `.env`, `node_modules/`, JWT, contraseñas, hashes o credenciales de MongoDB. `.env.example` contiene solo valores de ejemplo y `.gitignore` excluye los archivos privados. El comando `npm test` todavía es un marcador; las verificaciones de esta entrega fueron manuales con Postman.
 
-Crear un archivo `.env` en la raíz del proyecto, tomando como referencia `.env.example`.
-
-Ejemplo de configuración con MongoDB Atlas:
-
-```dotenv
-PORT=8080
-NODE_ENV=development
-MONGO_URL=mongodb+srv://USUARIO:CONTRASENA@TU_CLUSTER.mongodb.net/plataforma_eventos
-JWT_SECRET=REEMPLAZAR_POR_CLAVE_SECRETA_SEGURA
-JWT_EXPIRES_IN=1h
-```
-
-Para esta pre-entrega se utiliza **MongoDB Atlas** como servicio de base de datos en la nube. La conexión se configura mediante la variable de entorno `MONGO_URL`, utilizando la URI proporcionada por Atlas.
-
-El archivo `.env` contiene las credenciales privadas de conexión y la clave `JWT_SECRET`, por lo que está excluido del repositorio mediante `.gitignore`.
-
-La variable `JWT_EXPIRES_IN=1h` establece una duración de una hora para el JWT, mientras que la cookie `currentUser` utiliza `maxAge: 3600000`.
-
-### 4. Iniciar el servidor
-
-Modo desarrollo:
-
-```bash
-npm run dev
-```
-
-Modo normal:
-
-```bash
-npm start
-```
-
-El servidor se ejecuta por defecto en:
-
-`http://localhost:8080`
-
-La conexión con MongoDB se establece antes de iniciar Express.
-
-## Arquitectura del proyecto
-
-La aplicación utiliza una arquitectura modular con separación de responsabilidades.
+## Arquitectura
 
 ```text
 src/
@@ -106,13 +68,15 @@ src/
 │   ├── User.js
 │   └── Event.js
 ├── routes/
+│   ├── health.router.js
 │   ├── sessions.router.js
 │   ├── events.router.js
-│   └── health.router.js
+│   └── admin.router.js
 ├── controllers/
+│   ├── health.controller.js
 │   ├── sessions.controller.js
 │   ├── events.controller.js
-│   └── health.controller.js
+│   └── admin.controller.js
 ├── services/
 │   ├── sessions.service.js
 │   └── events.service.js
@@ -122,461 +86,201 @@ src/
 │   └── users.dao.js
 ├── middlewares/
 │   ├── auth.middleware.js
+│   ├── authorize.middleware.js
+│   ├── eventOwnership.middleware.js
 │   └── error.middleware.js
 └── utils/
     ├── hash.js
     └── jwt.js
 ```
 
-### Responsabilidades
+Las **rutas** enlazan middlewares y controladores; los **controladores** construyen respuestas HTTP; los **servicios** contienen reglas de negocio y validaciones; **repositorios/DAO** encapsulan acceso a usuarios; **modelos** definen los esquemas Mongoose. Los middlewares concentran las verificaciones de autenticación, rol y propiedad del evento.
 
-- **Routes:** definen los endpoints disponibles.
-- **Controllers:** gestionan solicitudes y respuestas HTTP.
-- **Services:** implementan validaciones y reglas de negocio.
-- **Repositories:** proporcionan una interfaz de acceso a datos.
-- **DAO:** realizan las operaciones de persistencia.
-- **Models:** definen los esquemas de Mongoose.
-- **Utils:** contienen funciones reutilizables para hashing, comparación de contraseñas y firma/verificación de JWT.
-- **Config:** contiene la conexión a MongoDB y el registro centralizado de estrategias Passport.
-- **Middlewares:** proporcionan procesamiento adicional y manejo de errores.
+## Usuarios y registro seguro
 
-El flujo de registro sigue esta secuencia:
+El modelo `User` define `first_name`, `last_name`, `email`, `password`, `role` y timestamps. El campo `role` acepta `user`, `organizer` y `admin`, con valor predeterminado **`user`**. La contraseña se guarda como hash de bcrypt y su campo está configurado con `select: false`.
 
-**Router → Passport (`register`) → Service → Repository → DAO → Modelo User → MongoDB → Controller (respuesta HTTP)**
+**POST `/api/sessions/register`** acepta nombre, apellido, email y contraseña (mínimo ocho caracteres). El servicio siempre asigna `role: "user"`, aun cuando el cliente intente enviar `"role": "admin"` o `"role": "organizer"`.
 
-El servicio utiliza el helper de bcrypt para generar el hash de la contraseña antes de guardar al usuario. Para el login, el DAO obtiene expresamente el hash del usuario con `.select("+password")` y el servicio utiliza `comparePassword()` para verificar las credenciales.
-
-La generación y verificación de JWT están disponibles en `src/utils/jwt.js`. En la Pre-entrega 4, la estrategia Passport `current` comprueba el JWT enviado en la cookie y coloca los datos públicos en `req.user`. El archivo `src/middlewares/auth.middleware.js` permanece como implementación anterior, pero **la ruta `/api/sessions/current` ya no lo utiliza**. El controller de login genera el JWT y administra la cookie.
-
-## Modelo User
-
-El modelo contiene los siguientes campos:
-
-| Campo | Descripción |
-|---|---|
-| `first_name` | Nombre obligatorio |
-| `last_name` | Apellido obligatorio |
-| `email` | Correo obligatorio, normalizado y único |
-| `password` | Contraseña almacenada mediante hash |
-| `role` | Rol del usuario |
-| `createdAt` | Fecha de creación |
-| `updatedAt` | Fecha de actualización |
-
-Los roles permitidos son:
-
-- `user`
-- `organizer`
-- `admin`
-
-En el registro público se asigna siempre el rol `user`, sin aceptar modificaciones desde el cuerpo de la solicitud.
-
-El esquema utiliza `timestamps: true` para registrar las fechas de creación y actualización.
-
-## Endpoint de registro
-
-### POST /api/sessions/register
-
-Permite registrar un usuario de forma segura.
-
-### Campos esperados en el body
+Ejemplo:
 
 ```json
 {
   "first_name": "Ana",
-  "last_name": "Perez",
-  "email": "Ana@Mail.com ",
-  "password": "Secreta123"
-}
-```
-
-Todos los campos son obligatorios.
-
-### Validaciones
-
-- Nombre y apellido obligatorios.
-- Email obligatorio y con formato válido.
-- Normalización del email mediante `trim()` y `toLowerCase()`.
-- Contraseña de al menos 8 caracteres.
-- Verificación de email previamente registrado.
-- Asignación del rol `user` desde el backend.
-- Hashing de la contraseña mediante bcrypt antes de guardarla.
-- Exclusión de la contraseña y su hash de la respuesta HTTP.
-
-### Respuesta exitosa — HTTP 201 Created
-
-```json
-{
-  "status": "success",
-  "payload": {
-    "id": "identificador_generado_por_mongodb",
-    "first_name": "Ana",
-    "last_name": "Perez",
-    "email": "ana@mail.com",
-    "role": "user"
-  }
-}
-```
-
-La respuesta no incluye el campo `password` ni su hash.
-
-### Error por campos faltantes — HTTP 400 Bad Request
-
-```json
-{
-  "status": "error",
-  "message": "Faltan campos obligatorios"
-}
-```
-
-### Error por email inválido — HTTP 400 Bad Request
-
-```json
-{
-  "status": "error",
-  "message": "Formato de email inválido"
-}
-```
-
-### Error por contraseña corta — HTTP 400 Bad Request
-
-```json
-{
-  "status": "error",
-  "message": "La contraseña debe tener al menos 8 caracteres"
-}
-```
-
-### Email duplicado — HTTP 409 Conflict
-
-```json
-{
-  "status": "error",
-  "message": "El email ya está registrado"
-}
-```
-
-### Error interno — HTTP 500 Internal Server Error
-
-```json
-{
-  "status": "error",
-  "message": "Error interno del servidor"
-}
-```
-
-## Cómo probar el registro
-
-Con MongoDB y el servidor Express en funcionamiento, ejecutar desde Git Bash:
-
-```bash
-curl -i -X POST http://localhost:8080/api/sessions/register \
-  -H "Content-Type: application/json" \
-  -d '{"first_name":"Ana","last_name":"Perez","email":"ana@mail.com","password":"Secreta123"}'
-```
-
-Se espera una respuesta HTTP 201 si el correo no está registrado.
-
-Si se utiliza nuevamente el mismo email, se espera una respuesta HTTP 409.
-
-Para realizar nuevos registros exitosos, utilizar un email que todavía no exista en la base de datos.
-
-### Casos de prueba realizados
-
-| Prueba | Código HTTP esperado | Resultado |
-|---|---|---|
-| Registro exitoso | 201 | Correcto |
-| Campos obligatorios faltantes | 400 | Correcto |
-| Email con formato inválido | 400 | Correcto |
-| Contraseña menor a 8 caracteres | 400 | Correcto |
-| Email previamente registrado | 409 | Correcto |
-| Intento de asignar rol admin | 201, con rol user | Correcto |
-| Respuesta sin contraseña | 201, sin password | Correcto |
-
-También se verificó el almacenamiento de contraseñas mediante hashes de bcrypt en MongoDB.
-
-### Protección contra asignación de roles
-
-Si un usuario intenta enviar el siguiente campo adicional:
-
-```json
-{
+  "last_name": "Pérez",
+  "email": "ana@example.com",
+  "password": "ClaveDePrueba123!",
   "role": "admin"
 }
 ```
 
-El backend ignora ese valor y asigna automáticamente el rol `user`.
+El rol de la cuenta creada será **`user`** y la respuesta **201 Created** no expondrá la contraseña ni el hash. Errores habituales: **400** por datos inválidos y **409** por email duplicado. La promoción de roles se hizo manualmente en MongoDB Atlas únicamente con cuentas de prueba; no hay una ruta pública para conceder privilegios.
 
-De esta manera, se aplica el principio de menor privilegio y se evita que un usuario obtenga permisos administrativos mediante el registro público.
+## Roles y matriz de permisos
 
-## Seguridad de las contraseñas
+| Acción | `user` | `organizer` | `admin` |
+|---|:---:|:---:|:---:|
+| Consultar eventos publicados | ✅ | ✅ | ✅ |
+| Consultar sesión propia | ✅ | ✅ | ✅ |
+| Crear eventos | ❌ | ✅ | ✅ |
+| Modificar eventos propios | ❌ | ✅ | ✅ |
+| Modificar eventos de otros | ❌ | ❌ | ✅ |
+| Ver todos los usuarios | ❌ | ❌ | ✅ |
 
-Las contraseñas se procesan mediante el helper reutilizable `src/utils/hash.js`.
+`GET /api/events` es público y, por lo tanto, también está disponible sin autenticación. En esta entrega, la autorización RBAC se expresa mediante `authorizeRoles(...allowedRoles)` en las rutas. La propiedad del evento se valida adicionalmente en `eventOwnership`.
 
-Se utiliza `bcrypt.hash()` con factor de costo 10.
+## Autenticación, autorización y Ownership
 
-El backend guarda solamente el hash de la contraseña, nunca su valor original.
+1. **Autenticación:** `authMiddleware` busca el JWT en la cookie HttpOnly `currentUser`, verifica el token y asigna `req.user` (`id`, `email`, `role`). Si falta o es inválido devuelve **401**. La ruta `/api/sessions/current` conserva la autenticación a través de la estrategia Passport `current`.
+2. **Autorización RBAC:** `authorizeRoles("organizer", "admin")` o `authorizeRoles("admin")` comprueba el rol después de autenticar. Si el usuario autenticado no tiene permisos devuelve **403**.
+3. **Ownership:** para `PATCH /api/events/:id`, `eventOwnership` busca el evento y compara `event.organizer` con `req.user.id`. Solo pasa un organizador propietario o un administrador.
+4. **Controlador:** únicamente se ejecuta si se superaron las verificaciones previas.
 
-Para validar las credenciales durante el login, el helper utiliza `bcrypt.compare()`.
+El rol no se toma del body enviado por el usuario: procede del JWT validado. Como mejora futura, se puede consultar el rol vigente en la base de datos para que los cambios de permisos tengan efecto antes de la expiración del token.
 
-El modelo `User` configura `select: false` para el campo `password`, y el servicio construye la respuesta utilizando únicamente campos permitidos.
+## Rutas HTTP
 
-### Medidas de seguridad implementadas
-
-La firma JWT nunca debe configurarse con una clave expuesta públicamente. En desarrollo, `secure` es `false` para permitir pruebas por HTTP local; en producción debe usarse HTTPS y `secure: true`. Para sistemas expuestos a internet, considerar también mitigaciones CSRF y limitación de intentos de login.
-
-- Validaciones de entrada en el backend.
-- Normalización del correo electrónico.
-- Prevención de usuarios duplicados.
-- Índice único para el email en MongoDB.
-- Hashing de contraseñas mediante bcrypt.
-- Control del rol asignado en el registro público.
-- Exclusión de información sensible en las respuestas.
-- Manejo de errores HTTP.
-- Uso de variables de entorno para la configuración.
-
-## Verificación en MongoDB
-
-Para pruebas locales, abrir MongoDB Compass y conectarse a `mongodb://127.0.0.1:27017`.
-
-**Para la entrega, verificar además la conexión con el clúster de MongoDB Atlas** configurado en el archivo `.env` privado. La conexión debe estar operativa antes de publicar la entrega.
-
-Ingresar a:
-
-`plataforma_eventos → users → Documents`
-
-Los documentos registrados deben contener:
-
-- Email normalizado.
-- Rol `user`.
-- Contraseña almacenada como hash de bcrypt, normalmente comenzando por `$2b$10$`.
-
-La contraseña original no debe aparecer en la base de datos ni en las respuestas de la API.
-
-Esta verificación permite confirmar la persistencia efectiva mediante Mongoose y el correcto tratamiento de datos sensibles.
-
-## Resumen de rutas HTTP
-
-| Método | Ruta | Descripción | Respuestas principales |
+| Método | Ruta | Acceso | Respuestas principales |
 |---|---|---|---|
-| GET | `/api/health` | Verifica el estado del servidor | 200 |
-| GET | `/api/events` | Lista los eventos | 200 |
-| GET | `/api/sessions` | Información del módulo de sesiones | 200 |
-| POST | `/api/sessions/register` | Registra un usuario | 201, 400, 409, 500 |
-| POST | `/api/sessions/login` | Valida credenciales y crea la cookie `currentUser` | 200, 400, 401, 500 |
-| GET | `/api/sessions/current` | Devuelve datos públicos del usuario autenticado | 200, 401 |
-| POST | `/api/sessions/logout` | Elimina la cookie de autenticación | 200 |
+| GET | `/api/health` | Público | 200 |
+| GET | `/api/sessions` | Público | 200 |
+| POST | `/api/sessions/register` | Público | 201, 400, 409 |
+| POST | `/api/sessions/login` | Público | 200, 400, 401 |
+| GET | `/api/sessions/current` | Autenticado | 200, 401 |
+| POST | `/api/sessions/logout` | Cierre de cookie | 200 |
+| GET | `/api/events` | Público: solo publicados | 200 |
+| POST | `/api/events` | `organizer`, `admin` | 201, 400, 401, 403 |
+| PATCH | `/api/events/:id` | `organizer` propietario, `admin` | 200, 400, 401, 403, 404 |
+| GET | `/api/admin/users` | Solo `admin` | 200, 401, 403 |
 
-El ejemplo de request/response del registro se encuentra en **Endpoint de registro**. Los ejemplos de las demás rutas se detallan a continuación.
+### Login y cookie
 
-## Login, JWT, cookie y cierre de sesión
-
-### POST /api/sessions/login
-
-**Request** (`Content-Type: application/json`):
-
-```json
-{
-  "email": "ana.prueba.20261020@example.com",
-  "password": "PruebaSegura123!"
-}
-```
-
-Passport ejecuta la estrategia `login`, que delega la validación en el servicio: exige los campos, normaliza el email, busca al usuario y compara la contraseña con el hash mediante bcrypt. Tras autenticar, **el controller** firma el JWT con `JWT_SECRET`, incluye `id`, `email`, `role` y aplica `JWT_EXPIRES_IN`.
-
-**Response HTTP 200 OK:**
+**POST `/api/sessions/login`**
 
 ```json
 {
-  "status": "success",
-  "message": "Login correcto"
+  "email": "organizador@example.com",
+  "password": "ClaveDePrueba123!"
 }
 ```
 
-La respuesta también incluye un encabezado `Set-Cookie` con `currentUser`, configurado con `HttpOnly`, `SameSite=Lax`, `Max-Age=3600` y `Secure` únicamente cuando `NODE_ENV=production`. El JWT no se devuelve en el cuerpo JSON.
+Respuesta **200 OK**:
 
-**Response HTTP 400 (campos faltantes):**
+```json
+{ "status": "success", "message": "Login correcto" }
+```
+
+El servidor establece `currentUser` con `HttpOnly`, `SameSite=Lax`, una hora de duración y `Secure` en producción. El token no se incluye en el JSON de respuesta. `GET /api/sessions/current` devuelve el `id`, `email` y `role` del usuario autenticado. `POST /api/sessions/logout` elimina la cookie; esto no revoca criptográficamente un JWT que alguien haya conservado.
+
+### Crear evento
+
+**POST `/api/events`** (con cookie de `organizer` o `admin`):
 
 ```json
 {
-  "status": "error",
-  "message": "Email y contraseña son obligatorios"
+  "title": "Congreso Tech 2026",
+  "description": "Encuentro de tecnología",
+  "date": "2026-12-15",
+  "capacity": 100
 }
 ```
 
-**Response HTTP 401 (email inexistente o contraseña incorrecta):**
-
-```json
-{
-  "status": "error",
-  "message": "Credenciales inválidas"
-}
-```
-
-Se utiliza el mismo mensaje para no revelar cuál de las credenciales falló.
-
-### GET /api/sessions/current
-
-**Request:**
-
-```http
-GET /api/sessions/current
-Cookie: currentUser=<JWT_VALIDO>
-```
-
-La cookie se envía automáticamente si el cliente HTTP la conserva. La estrategia Passport `current` extrae y verifica el JWT de la cookie, y adjunta los campos públicos a `req.user`.
-
-**Response HTTP 200 OK:**
+Respuesta ilustrativa **201 Created**:
 
 ```json
 {
   "status": "success",
   "payload": {
-    "id": "ID_GENERADO_POR_MONGODB",
-    "email": "ana.prueba.20261020@example.com",
-    "role": "user"
+    "id": "ID_DEL_EVENTO",
+    "title": "Congreso Tech 2026",
+    "description": "Encuentro de tecnología",
+    "date": "2026-12-15T00:00:00.000Z",
+    "capacity": 100,
+    "status": "draft",
+    "organizer": "ID_DEL_USUARIO_AUTENTICADO"
   }
 }
 ```
 
-**Response HTTP 401 (cookie ausente, token inválido o expirado):**
+El organizador se obtiene de `req.user.id`, **nunca** de `req.body.organizer`. Los eventos nuevos se crean como `draft`. Por eso no aparecen en `GET /api/events`, que devuelve solo los eventos con estado `published`.
+
+### Modificar evento
+
+**PATCH `/api/events/:id`** con cookie autorizada y un ID de evento real:
 
 ```json
 {
-  "status": "error",
-  "message": "No autenticado"
+  "title": "Congreso Tech 2026 - Actualizado",
+  "capacity": 120
 }
 ```
 
-### POST /api/sessions/logout
+Un organizador solo puede modificar los recursos cuyo `organizer` coincida con su ID; un administrador puede modificar cualquiera. La actualización admite `title`, `description`, `date` y `capacity`, pero no permite cambiar el propietario ni publicar arbitrariamente mediante estos campos.
 
-**Request:**
+### Consultar usuarios (solo admin)
 
-```http
-POST /api/sessions/logout
-Cookie: currentUser=<JWT_VALIDO>
-```
+**GET `/api/admin/users`** devuelve **200 OK** y un arreglo `payload` con identificador, nombre, apellido, email, rol y fecha de creación. Se emplea una selección explícita de campos en MongoDB; **no se devuelven contraseñas ni hashes**.
 
-No requiere body. El servidor borra la cookie `currentUser` con `res.clearCookie()`.
+## Códigos de error
 
-**Response HTTP 200 OK:**
-
-```json
-{
-  "status": "success",
-  "message": "Sesión cerrada"
-}
-```
-
-Tras el logout, `/current` devuelve 401 si el cliente deja de enviar la cookie. Borrar una cookie no revoca criptográficamente un JWT que alguien hubiera conservado; el token seguiría siendo válido hasta su vencimiento salvo que se implemente revocación adicional.
-
-### Pruebas realizadas de autenticación
-
-| Caso | Resultado verificado |
-|---|---|
-| Registro válido sin exponer password | Usuario creado |
-| Login correcto y cookie `currentUser` | 200 |
-| `/current` con cookie válida | 200, datos públicos |
-| `/current` sin cookie | 401, `No autenticado` |
-| Logout y `/current` después de cerrar sesión | 200 y luego 401 |
-| Login con email inexistente | 401 |
-| Login con contraseña incorrecta | 401 |
-| `/current` con token mal formado | 401, `No autenticado` |
-| `/current` con token expirado | 401, `No autenticado` |
-
-Como evidencia adicional se pueden adjuntar capturas de Thunder Client/Postman del login (`Set-Cookie`), `/current` con cookie (200) y `/current` sin cookie (401). Ocultar siempre los valores de JWT y las credenciales privadas.
-
-## Otros endpoints disponibles
-
-### GET /api/health
-
-```json
-{
-  "status": "ok",
-  "message": "Servidor activo"
-}
-```
-
-### GET /api/events
-
-```json
-{
-  "status": "success",
-  "payload": []
-}
-```
-
-### GET /api/sessions
-
-```json
-{
-  "status": "success",
-  "message": "Módulo de sesiones preparado"
-}
-```
-
-Estos endpoints se mantienen desde la Pre-entrega 1. Para `GET /api/health`, `GET /api/events` y `GET /api/sessions`, los ejemplos de request son respectivamente `GET /api/health`, `GET /api/events` y `GET /api/sessions`, sin body, y sus respuestas 200 son las mostradas arriba.
-
-## Estado del proyecto
-
-### Pre-entrega 1
-
-- Arquitectura modular inicial.
-- Configuración de Express.
-- Modelos iniciales.
-- Rutas de health, events y sessions.
-
-### Pre-entrega 2
-
-- Modelo User actualizado.
-- Conexión efectiva a MongoDB.
-- Registro seguro de usuarios.
-- Validaciones de entrada.
-- Normalización y unicidad de email.
-- Protección de contraseñas con bcrypt.
-- Separación de responsabilidades en capas.
-- Respuestas HTTP sin datos sensibles.
-- Pruebas de registro exitoso y manejo de errores.
-
-### Pre-entrega 3
-
-- Login con validación de credenciales y mensajes genéricos ante errores.
-- Generación de JWT firmado mediante variable de entorno.
-- Cookie HttpOnly `currentUser` y expiración configurable.
-- Middleware de autenticación y ruta protegida `/current`.
-- Logout con eliminación de cookie.
-- Pruebas de acceso válido, sin cookie, con token inválido y expirado.
-
-## Pre-entrega 4 — Passport.js y flujo de autenticación
-
-Las estrategias se configuran exclusivamente en `src/config/passport.config.js` y se inicializan en `src/app.js` mediante `passport.initialize()`. Las rutas delegan la autenticación en `passport.authenticate(..., { session: false }, callback)`, usando un callback para conservar los códigos de estado y los mensajes HTTP de la Pre-entrega 3. No se utiliza `express-session` ni `passport.session()`.
-
-| Estrategia | Implementación | Responsabilidad |
+| Código | Significado | Ejemplo |
 |---|---|---|
-| `register` | `passport-local` | Valida nombre, apellido, email y contraseña; normaliza el correo; controla unicidad; usa bcrypt; guarda el usuario con rol `user` y devuelve datos públicos. |
-| `login` | `passport-local` | Valida email y contraseña usando el servicio y compara con bcrypt; entrega datos públicos del usuario al controller. |
-| `current` | `passport-jwt` | Extrae JWT de `req.cookies.currentUser`, verifica firma y vencimiento, valida campos y proporciona `req.user`. |
+| **400 Bad Request** | Datos inválidos | Título vacío o ID de evento mal formado |
+| **401 Unauthorized** | No autenticado | Cookie ausente, inválida o vencida |
+| **403 Forbidden** | Autenticado sin permiso | `user` crea evento; `organizer` modifica evento ajeno |
+| **404 Not Found** | Recurso inexistente | Evento no encontrado |
+| **409 Conflict** | Conflicto de negocio | Email ya registrado |
+| **500 Internal Server Error** | Fallo imprevisto | Error interno, sin exponer detalles técnicos |
 
-**Separación de responsabilidades:** Passport autentica; **el controller de login** genera el JWT y establece la cookie `currentUser` con `HttpOnly` y `SameSite=Lax` (`Secure` en producción). El controller de `/current` devuelve solo `id`, `email` y `role`. `/logout` elimina la cookie y no requiere Passport. Las rutas y el contrato JSON se mantienen sin cambios.
+Ejemplo **401**:
 
-**Preparado para proveedores externos:** la centralización en `passport.config.js` permite incorporar estrategias adicionales como Google o GitHub sin modificar `app.js`. Dichos proveedores **todavía no están implementados**.
+```json
+{ "status": "error", "message": "No autenticado" }
+```
 
-### Pruebas de la Pre-entrega 4 realizadas con Postman
+Ejemplo **403** por rol:
 
-| Escenario | HTTP observado |
-|---|---|
-| Registro exitoso | 201 |
-| Registro con email duplicado | 409 |
-| Login válido | 200 |
-| `/current` con cookie válida | 200 |
-| Logout | 200 |
-| `/current` después de logout | 401 |
-| Login con contraseña incorrecta | 401 |
-| `/current` con cookie y token mal formado | 401 |
+```json
+{ "status": "error", "message": "No tenés permisos para realizar esta acción" }
+```
 
-El flujo probado fue **register → login → current (200) → logout → current (401)**. Se recomienda adjuntar capturas de Postman ocultando el JWT, las contraseñas y cualquier secreto.
+Ejemplo **403** por propiedad:
 
-## Próximas funcionalidades
-- Autorización por roles.
-- CRUD completo de eventos.
-- Inscripciones y control de cupos.
-- Notificaciones.
+```json
+{ "status": "error", "message": "No tenés permisos para modificar este evento" }
+```
+
+El middleware global conserva errores controlados con `statusCode` entre 400 y 599 y utiliza 500 para errores inesperados.
+
+## Pruebas manuales realizadas en Postman
+
+| Prueba | HTTP observado |
+|---|---:|
+| `POST /api/events` sin cookie | 401 |
+| `POST /api/events` con `user` | 403 |
+| `POST /api/events` con `organizer` | 201 |
+| `PATCH /api/events/:id` con organizador propietario | 200 |
+| `PATCH /api/events/:id` con organizador no propietario | 403 |
+| `PATCH /api/events/:id` con administrador sobre evento ajeno | 200 |
+| `GET /api/admin/users` con administrador | 200 |
+| `GET /api/admin/users` con organizador | 403 |
+| `GET /api/admin/users` sin cookie | 401 |
+| `POST /api/events` con título vacío y organizer autenticado | 400 |
+
+También se verificaron el registro, login, consulta de sesión actual y logout durante las entregas anteriores. Las pruebas son manuales: todavía no se implementó una suite automatizada.
+
+Para reproducir las pruebas: registrar cuentas de prueba; asignar manualmente los roles `organizer` o `admin` en MongoDB Atlas; **volver a iniciar sesión** para emitir un JWT actualizado; y enviar las solicitudes correspondientes con Postman. Para probar el 401, eliminar la cookie `currentUser`. Se recomienda adjuntar capturas con método, URL, código y respuesta, ocultando cookies, JWT y contraseñas.
+
+## Seguridad y alcance
+
+- El registro público asigna siempre `user` desde el servidor.
+- Los permisos se validan en middlewares del backend; ocultar botones del frontend no es protección suficiente.
+- Los eventos tienen un `organizer` obligatorio para permitir el control de propiedad.
+- El listado administrativo no incluye contraseñas ni hashes.
+- La consulta de eventos públicos filtra por `status: "published"`.
+- En sistemas desplegados públicamente convendría agregar protección CSRF, limitación de intentos de login, gestión de revocación de JWT y comprobación de roles vigentes contra MongoDB.
+- El CRUD completo de eventos, las inscripciones y las notificaciones quedan fuera del alcance implementado en esta pre-entrega.
+
+## Publicación
+
+El repositorio público debe incluir `package.json`, `package-lock.json`, `.gitignore`, `.env.example`, `README.md` y el código fuente. **No** publicar `.env`, `node_modules`, secretos, credenciales reales ni cookies de sesión.
